@@ -18,15 +18,24 @@ function startgame(){
 		}
 	}
 	let timerInterval = null;
-	let elapsedSeconds = 0;
-	// create timer UI element in scoreboard if not present
+	let timeLeft = 60; 
 	let timeEls = document.querySelectorAll('.time-count');
+
 	if (!timeEls || timeEls.length === 0){
 		const timeDiv = document.createElement('div');
 		timeDiv.className = 'score time-count';
-		timeDiv.textContent = 'Time: 00:00';
+		timeDiv.textContent = 'Time: 01:00';
 		if (scoreboard) scoreboard.appendChild(timeDiv);
 		timeEls = document.querySelectorAll('.time-count');
+	}
+	
+	let topTimerEl = document.getElementById('timer');
+	if (!topTimerEl) {
+		const timerDiv = document.createElement('div');
+		timerDiv.id = 'timerdiv';
+		timerDiv.innerHTML = 'Time left = <span id="timer">01:00</span>';
+		document.body.insertBefore(timerDiv, document.body.firstChild);
+		topTimerEl = document.getElementById('timer');
 	}
 
 	function formatTime(sec){
@@ -36,21 +45,50 @@ function startgame(){
 	}
 
 	function updateTimerDisplay(){
-		timeEls.forEach(el => el.textContent = `Time: ${formatTime(elapsedSeconds)}`);
+		timeEls.forEach(el => el.textContent = `Time: ${formatTime(timeLeft)}`);
+		if (topTimerEl) topTimerEl.textContent = formatTime(timeLeft);
 	}
 
 	function startTimer(){
 		stopTimer();
-		elapsedSeconds = 0;
+		timeLeft = 60;
 		updateTimerDisplay();
 		timerInterval = setInterval(()=>{
-			elapsedSeconds++;
+			timeLeft--;
 			updateTimerDisplay();
+			if (timeLeft <= 0) {
+				stopTimer();
+				endGameByTimer();
+			}
 		}, 1000);
 	}
 
 	function stopTimer(){
 		if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+	}
+
+	function endGameByTimer(){
+		locked = true;
+		winscreen.classList.add('visible');
+		const win_clicks = winscreen.querySelectorAll('.click-count');
+		win_clicks.forEach(el => el.textContent = `Total Clicks: ${clickcount}`);
+		const win_low = winscreen.querySelectorAll('.low-score');
+		win_low.forEach(el => el.textContent = `Low Score: ${localStorage.getItem('memory_best')}`);
+		let win_time_el = winscreen.querySelector('.time-count');
+		if(!win_time_el){
+			win_time_el = document.createElement('div');
+			win_time_el.className = 'time-count';
+			winscreen.insertBefore(win_time_el, winscreen.querySelector('#replay'));
+		}
+		win_time_el.textContent = `Time: 00:00`;
+		let starBox = winscreen.querySelector('.star-rating');
+		if(!starBox){
+			starBox = document.createElement('div');
+			starBox.className = 'star-rating';
+			winscreen.insertBefore(starBox, winscreen.querySelector('#replay'));
+		}
+		starBox.textContent = `Rating: ☆☆☆☆☆`;
+		if (topTimerEl) topTimerEl.textContent = '00:00';
 	}
 
 	function newgame(){
@@ -96,8 +134,6 @@ function startgame(){
 		flipped.push(id);
 		clickcount++;
 		updateclicks();
-        var presentTime = document.getElementById('timer').innerHTML;
-        var timeArray = presentTime.split(/[:]+/);
 
 		if (flipped.length === 2){
 			const [a,b] = flipped;
@@ -106,7 +142,7 @@ function startgame(){
 			if (faceA === faceB){
 				matched.add(a); matched.add(b);
 				flipped = [];
-				if (matched.size === cards.length || ((timeArray[1] - 1)==0 &&  timeArray[0]==0)){
+				if (matched.size === cards.length){
 					const prev = parseInt(localStorage.getItem('memory_best') || '0');
 					if (prev === 0 || clickcount < prev) localStorage.setItem('memory_best', String(clickcount));
 					updatelowscoredisplay();
@@ -116,18 +152,17 @@ function startgame(){
 					win_clicks.forEach(el => el.textContent = `Total Clicks: ${clickcount}`);
 					const win_low = winscreen.querySelectorAll('.low-score');
 					win_low.forEach(el => el.textContent = `Low Score: ${localStorage.getItem('memory_best')}`);
-					// show time on win screen
 					let win_time_el = winscreen.querySelector('.time-count');
 					if(!win_time_el){
 						win_time_el = document.createElement('div');
 						win_time_el.className = 'time-count';
 						winscreen.insertBefore(win_time_el, winscreen.querySelector('#replay'));
 					}
-					win_time_el.textContent = `Time: ${formatTime(elapsedSeconds)}`;
+					win_time_el.textContent = `Time: ${formatTime(60-timeLeft)}`;
 					let starBox = winscreen.querySelector('.star-rating');
 					function computeStars(c){
 						if (c <= 12) return 5;
-                        if (c <= 18) return 4;
+						if (c <= 18) return 4;
 						if (c <= 25) return 3;
 						if (c <= 30) return 2;
 						if (c <= 35) return 1;
@@ -153,48 +188,11 @@ function startgame(){
 			}
 		}
 	}
+	cards.forEach(c => c.removeEventListener('click', oncardclick));
 	cards.forEach(c => c.addEventListener('click', oncardclick));
+	replaybtn.removeEventListener('click', ()=> newgame());
 	replaybtn.addEventListener('click', ()=> newgame());
 	updatelowscoredisplay();
 	newgame();
 }
 startgame();
-
-
-
-if(document.getElementById('timer')){
-    document.getElementById('timer').innerHTML =0 + ":" + 0o5;
-    startTimer();
-}
-
-
-function startTimer() {
-    if(document.getElementById('timer')){
-        var presentTime = document.getElementById('timer').innerHTML;
-        var timeArray = presentTime.split(/[:]+/);
-        var m = timeArray[0];
-        var s = checkSecond((timeArray[1] - 1));
-        if(s==59){m=m-1}
-        if(m<0){
-            return
-        }
-        if(document.getElementById('timer')){
-            document.getElementById('timer').innerHTML =
-                m + ":" + s;
-            console.log(m)
-            setTimeout(startTimer, 1000);
-        }
-
-  
-    }
-
-}
-
-function checkSecond(sec) {
-  if (sec < 10 && sec >= 0) {sec = "0" + sec}; // add zero in front of numbers < 10
-  if (sec < 0) {sec = "59"};
-  var presentTime = document.getElementById('timer').innerHTML;
-  var timeArray = presentTime.split(/[:]+/);
-  if((timeArray[1] - 1)==0 &&  timeArray[0]==0)calulateresult();
-  return sec;
-}
