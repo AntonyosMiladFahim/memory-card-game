@@ -196,3 +196,4 @@ function startgame(){
 	newgame();
 }
 startgame();
+
